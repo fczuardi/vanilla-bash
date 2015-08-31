@@ -3,6 +3,19 @@
 #default parameters, empty
 method='getinfo'
 params='[]'
+usage="
+Usage: api.sh [options]
+
+Available options:
+-m <method> : Method
+-p <params> : Single parameter or json object with multiple parameters
+-l          : List
+
+Examples:
+./api.sh -m getbalance -p myaccount
+./api.sh -m listreceivedbyaccount -p '{\"minconf\":1,\"includeempty\":true}'
+"
+
 
 while getopts ":m:p:l" opt; do
     case $opt in
@@ -10,7 +23,12 @@ while getopts ":m:p:l" opt; do
             method=$OPTARG
             ;;
         p)
-            params="[\"$OPTARG\"]"
+            if [[ "$OPTARG" =~ [\{\[\"] ]]
+            then
+                params=$OPTARG
+            else
+                params="[\"$OPTARG\"]"
+            fi
             ;;
         :)
             echo "option -$OPTARG requires an argument" >&2
@@ -24,16 +42,15 @@ while getopts ":m:p:l" opt; do
             exit 1
             ;;
         \?)
-            echo "Available options:"
-            echo "-m <method> : Method"
-            echo "-p <param>  : Parameter"
-            echo "-l          : List"
+            echo "$usage"
             exit 1
             ;;
     esac
 done
 
+set -x
 curl \
 -H 'content-type: text/plain;' \
 --data-binary "{\"jsonrpc\": \"1.0\", \"method\": \"$method\", \"params\": $params }" \
-http://127.0.0.1:9195/
+http://127.0.0.1:9195/ | python -m json.tool
+
